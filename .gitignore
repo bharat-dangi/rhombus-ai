@@ -25,6 +25,8 @@ data/                      # Directory for data files (adjust if needed)
 *.pyc
 *.pyo
 
+django-be/.env 
+
 # Frontend (React) Node modules
 react-fe/node_modules/
 react-fe/.env             
