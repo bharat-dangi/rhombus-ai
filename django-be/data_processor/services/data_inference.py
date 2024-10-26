@@ -103,10 +103,10 @@ def infer_column_type(col_data: pd.Series) -> str:
         return "timedelta64[ns]"
     if is_boolean_column(col_data):
         return "bool"
-    if is_categorical_column(col_data):
-        return "category"
     if is_complex_column(col_data):
         return "complex"
+    if is_categorical_column(col_data):
+        return "category"
     return "object"
 
 def safely_convert_column(column: pd.Series, dtype: str) -> pd.Series:
