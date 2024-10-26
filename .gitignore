@@ -1,0 +1,40 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Python virtual environment
+venv/
+env/
+ENV/
+
+# Environment variables
+django-be/.env            # Environment variables for Django backend
+
+# Log files
+*.log
+logs/
+
+# Large data files and datasets
+data/                      # Directory for data files (adjust if needed)
+*.csv                      # CSV files, ignore large datasets
+*.xlsx                     # Excel files if not required in version control
+/tmp/                      # Temporary files directory for uploads or processing
+
+# Ignore compiled or cached files
+*.pyc
+*.pyo
+
+# Frontend (React) Node modules
+react-fe/node_modules/
+react-fe/.env             
+
+# Ignore build files if using build tools in frontend
+react-fe/build/
+react-fe/.next/
+react-fe/out/
+
+
+# VS Code specific files
+.vscode/
+
