@@ -7,7 +7,6 @@
 2. Create and Activate Virtual Environment
 Note: You should use Python 3
 ```
-cd django-be
 python3 -m venv env
 source env/bin/activate  # On Windows, use `env\Scripts\activate`
 ```
