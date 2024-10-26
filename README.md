@@ -24,8 +24,11 @@ source env/bin/activate  # On Windows, use `env\Scripts\activate`
 ### Frontend Setup (React)
 1. Go to Frontend folder `cd react-fe`
 2. Install the required npm packages:
-Note: Use Node version 16
-`npm install`
+
+    Note: Use Node version 16
+
+    `npm install`
+    
 3. Create an `.env` file inside the `react-fe` directory.
 4. Copy and paste the following content into the `.env` file:
 `REACT_APP_BE_URL=http://127.0.0.1:8000/api/  # Update if backend URL is different`
