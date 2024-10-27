@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { uploadFile, fetchData, updateColumnTypes } from "../services/api";
 import { mapDataType } from "../utils/dataTypeMapper";
 import ErrorMessage from "./ErrorMessage";
@@ -9,49 +9,58 @@ const UploadFile = () => {
   const [inferredData, setInferredData] = useState(null);
   const [tableData, setTableData] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
-  const [uploadError, setUploadError] = useState(null); // Error for the upload form
-  const [tableError, setTableError] = useState(null); // Error for the data table
+  const [uploadError, setUploadError] = useState(null);
+  const [tableError, setTableError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [skip, setSkip] = useState(0); // Initialize skip for pagination
+  const limit = 100; // Limit for each batch of data
+
+  // Load initial data and subsequent data on scroll
+  const loadData = useCallback(async () => {
+    // Stop loading if already loading or if all data has been fetched
+    if (loading || (skip >= totalCount && skip > 0)) return;
+
+    setLoading(true);
+    setTableError(null);
+
+    try {
+      const data = await fetchData(skip, limit); // Pass skip and limit to fetch data
+      if (data?.data) {
+        const mappedDataTypes = Object.fromEntries(
+          Object.entries(data.inferred_types).map(([column, dtype]) => [
+            column,
+            mapDataType(dtype),
+          ]),
+        );
+        setInferredData(mappedDataTypes);
+        setTableData((prevData) => [...prevData, ...data.data]); // Append new data
+        setTotalCount(data.total_count);
+        setSkip(skip + limit); // Increment skip by limit for next fetch
+      }
+    } catch (err) {
+      console.error("Error fetching data:", err);
+      setTableError("Failed to load data.");
+    } finally {
+      setLoading(false);
+    }
+  }, [loading, skip, limit, totalCount]);
 
   useEffect(() => {
-    const loadExistingData = async () => {
-      if (!loading) {
-        setLoading(true);
-        try {
-          const data = await fetchData();
-          if (data?.data) {
-            const mappedDataTypes = Object.fromEntries(
-              Object.entries(data.inferred_types).map(([column, dtype]) => [
-                column,
-                mapDataType(dtype),
-              ]),
-            );
-            setInferredData(mappedDataTypes);
-            setTableData(data.data);
-            setTotalCount(data.total_count);
-          }
-        } catch (err) {
-          console.error("Error fetching existing data:", err);
-          setTableError("Failed to fetch existing data."); // Set error for data table
-        } finally {
-          setLoading(false);
-        }
-      }
-    };
-    loadExistingData();
+    loadData(); // Initial data load
   }, []);
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
-    setUploadError(null); // Clear previous upload error
-    setTableError(null); // Clear table error when new file is selected
+    setUploadError(null);
+    setTableError(null);
     setInferredData(null);
     setTableData([]);
+    setSkip(0); // Reset skip for new data load
   };
 
   const handleUpload = async () => {
     if (!file || loading) {
-      setUploadError("Please select a file."); // Set error for upload form
+      setUploadError("Please select a file.");
       return;
     }
 
@@ -69,8 +78,9 @@ const UploadFile = () => {
       setInferredData(mappedDataTypes);
       setTableData(data.data);
       setTotalCount(data.total_count);
+      setSkip(data.data.length); // Set skip based on initial data length
     } catch (error) {
-      setUploadError("Failed to upload file."); // Set error for upload form
+      setUploadError("Failed to upload file.");
       console.error(error);
     } finally {
       setLoading(false);
@@ -94,7 +104,8 @@ const UploadFile = () => {
     setTableData([]);
     setUploadError(null);
     setLoading(false);
-    document.getElementById("fileInput").value = null;
+    setSkip(0); // Reset skip
+    document.getElementById("fileInput").value = null; // Clear file input
   };
 
   return (
@@ -104,8 +115,7 @@ const UploadFile = () => {
         <h2 className="text-2xl font-semibold text-center mb-6">
           Upload Your Data File
         </h2>
-        {uploadError && <ErrorMessage message={uploadError} />}{" "}
-        {/* Upload error message */}
+        {uploadError && <ErrorMessage message={uploadError} />}
         <div className="flex flex-col sm:flex-row items-center gap-4 mb-4">
           <input
             id="fileInput"
@@ -144,9 +154,16 @@ const UploadFile = () => {
           <DataTable
             data={tableData}
             inferredData={inferredData}
+            onLoadMore={loadData} // Pass loadData to DataTable for infinite scrolling
+            loading={loading}
             onTypeChange={handleTypeChange}
           />
-          {tableError && <ErrorMessage message={tableError} />}{" "}
+          {tableError && <ErrorMessage message={tableError} />}
+          {loading && (
+            <p className="text-center text-gray-500 mt-4">
+              Loading more data...
+            </p>
+          )}
         </div>
       )}
     </div>

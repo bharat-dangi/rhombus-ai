@@ -1,34 +1,32 @@
+// src/services/api.js
 import axios from "axios";
 
-// Creates an Axios instance with base URL for backend requests
 const API = axios.create({
-  baseURL: process.env.REACT_APP_BE_URL, // Base URL defined in environment variables
+  baseURL: process.env.REACT_APP_BE_URL,
 });
 
 // Uploads the selected file to the backend and returns processed data
 export const uploadFile = async (file) => {
   const formData = new FormData();
-  formData.append("file", file); // Appends file to form data for upload
+  formData.append("file", file);
 
   try {
-    const response = await API.post("upload/", formData, {
+    const response = await API.post("/upload/", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
-    return response?.data; // Returns response data on successful upload
+    return response?.data;
   } catch (error) {
-    // Throws error with a descriptive message if upload fails
     throw new Error(error?.response?.data?.message || "File upload failed.");
   }
 };
 
-// Fetches previously saved data and schema from the backend
-export const fetchData = async () => {
+// Fetches paginated data from the backend using skip and limit
+export const fetchData = async (skip = 0, limit = 100) => {
   try {
-    const response = await API.get("data/");
-    return response?.data; // Returns fetched data on successful response
+    const response = await API.get(`/data?skip=${skip}&limit=${limit}`);
+    return response?.data;
   } catch (error) {
-    // Throws error if data fetching fails
-    throw new Error("Failed to fetch data from the backend.");
+    throw new Error(error?.response?.data?.message || "Failed to fetch data.");
   }
 };
 
@@ -44,5 +42,3 @@ export const updateColumnTypes = async (columnTypes) => {
     throw new Error("Failed to update column types.");
   }
 };
-
-export default API;
