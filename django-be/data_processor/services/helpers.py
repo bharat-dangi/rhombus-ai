@@ -1,4 +1,5 @@
 import pandas as pd
+from datetime import datetime, timedelta
 
 def format_inferred_types(data_frame: pd.DataFrame) -> dict:
     """
@@ -14,7 +15,8 @@ def format_inferred_types(data_frame: pd.DataFrame) -> dict:
 
 def convert_data_to_json_compatible(data):
     """
-    Converts DataFrame data to JSON-compatible format by handling NaNs.
+    Converts DataFrame data to JSON-compatible format by handling NaNs,
+    Timestamp, Timedelta, and complex numbers.
     
     Parameters:
     - data (list of dict): List of records (dicts) where each record represents a row
@@ -22,4 +24,16 @@ def convert_data_to_json_compatible(data):
     Returns:
     - list of dict: JSON-compatible list of records with NaNs replaced by None
     """
-    return [{k: (None if pd.isna(v) else v) for k, v in record.items()} for record in data]
+    def json_compatible(value):
+        if pd.isna(value):
+            return None
+        elif isinstance(value, (pd.Timestamp, datetime)):
+            return value.isoformat()
+        elif isinstance(value, timedelta):
+            return str(value)
+        elif isinstance(value, complex):
+            return str(value)  # Convert complex numbers to string
+        else:
+            return value
+    
+    return [{k: json_compatible(v) for k, v in record.items()} for record in data]

@@ -1,7 +1,7 @@
 import os
 import json
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 from .helpers import format_inferred_types, convert_data_to_json_compatible
 
 # Define storage directory for persistent data storage
@@ -36,10 +36,7 @@ def save_data_to_disk(data_frame: pd.DataFrame):
     - data.json: Contains row data in JSON format
     - schema.json: Contains inferred column types in JSON format
     """
-    data = convert_data_to_json_compatible(
-        data_frame.applymap(lambda x: x.isoformat() if isinstance(x, (pd.Timestamp, datetime)) else x).to_dict(orient="records")
-    )
-    
+    data = convert_data_to_json_compatible(data_frame.to_dict(orient="records"))
     inferred_types = format_inferred_types(data_frame)
     
     with open(os.path.join(DATA_DIR, "data.json"), "w") as data_file:

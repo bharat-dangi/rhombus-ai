@@ -69,12 +69,6 @@ def get_data(request, skip: int = 0, limit: int = 100):
 def update_column_types(request):
     """
     Endpoint to update data types for specified columns based on user input.
-    
-    Request Body:
-    - JSON containing a "column_types" dictionary, e.g., {"Score": "Float"}
-    
-    Returns:
-    - JsonResponse: Contains updated inferred types after type conversions
     """
     try:
         body_data = json.loads(request.body)
@@ -84,7 +78,7 @@ def update_column_types(request):
 
     data, inferred_types = load_data_from_disk()
     if data is None or inferred_types is None:
-        return JsonResponse({"error": "No data available"}, status=404)
+        return JsonResponse({"error": "No data available or data is corrupted"}, status=404)
 
     data_frame = pd.DataFrame(data)
 
@@ -96,7 +90,6 @@ def update_column_types(request):
             except Exception as e:
                 return JsonResponse({"error": f"Failed to convert {column} to {new_type}: {str(e)}"}, status=400)
 
-    # Save updated data and types
     save_data_to_disk(data_frame)
     updated_types = format_inferred_types(data_frame)
     return JsonResponse({"inferred_types": updated_types})
