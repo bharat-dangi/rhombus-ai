@@ -1,72 +1,112 @@
-import React, { useState } from "react";
-import { uploadFile } from "../services/api";
+import React, { useState, useEffect } from "react";
+import { uploadFile, fetchData, updateColumnTypes } from "../services/api";
 import { mapDataType } from "../utils/dataTypeMapper";
-import InferredDataDisplay from "./InferredDataDisplay";
 import ErrorMessage from "./ErrorMessage";
+import DataTable from "./DataTable";
 
-// Main component to handle file uploads and data type display
 const UploadFile = () => {
-  const [file, setFile] = useState(null); // Selected file
-  const [inferredData, setInferredData] = useState(null); // Inferred data types
-  const [error, setError] = useState(null); // Error message
-  const [loading, setLoading] = useState(false); // Loading state
+  const [file, setFile] = useState(null);
+  const [inferredData, setInferredData] = useState(null);
+  const [tableData, setTableData] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [uploadError, setUploadError] = useState(null); // Error for the upload form
+  const [tableError, setTableError] = useState(null); // Error for the data table
+  const [loading, setLoading] = useState(false);
 
-  // Updates selected file state
+  useEffect(() => {
+    const loadExistingData = async () => {
+      if (!loading) {
+        setLoading(true);
+        try {
+          const data = await fetchData();
+          if (data?.data) {
+            const mappedDataTypes = Object.fromEntries(
+              Object.entries(data.inferred_types).map(([column, dtype]) => [
+                column,
+                mapDataType(dtype),
+              ]),
+            );
+            setInferredData(mappedDataTypes);
+            setTableData(data.data);
+            setTotalCount(data.total_count);
+          }
+        } catch (err) {
+          console.error("Error fetching existing data:", err);
+          setTableError("Failed to fetch existing data."); // Set error for data table
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+    loadExistingData();
+  }, []);
+
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
-    setError(null);
+    setUploadError(null); // Clear previous upload error
+    setTableError(null); // Clear table error when new file is selected
     setInferredData(null);
+    setTableData([]);
   };
 
-  // Uploads file and processes data type inference
   const handleUpload = async () => {
-    if (!file) {
-      setError("Please select a file."); // Shows error if no file selected
+    if (!file || loading) {
+      setUploadError("Please select a file."); // Set error for upload form
       return;
     }
 
-    setLoading(true); // Activates loading state
-    setError(null);
+    setLoading(true);
+    setUploadError(null);
 
     try {
-      const data = await uploadFile(file); // Sends file to backend
-      const mappedData = Object.fromEntries(
+      const data = await uploadFile(file);
+      const mappedDataTypes = Object.fromEntries(
         Object.entries(data.inferred_types).map(([column, dtype]) => [
           column,
-          mapDataType(dtype), // Maps backend types to user-friendly names
+          mapDataType(dtype),
         ]),
       );
-      setInferredData(mappedData); // Updates state with inferred data types
+      setInferredData(mappedDataTypes);
+      setTableData(data.data);
+      setTotalCount(data.total_count);
     } catch (error) {
-      setError(error.message); // Displays error message on failure
+      setUploadError("Failed to upload file."); // Set error for upload form
+      console.error(error);
     } finally {
-      setLoading(false); // Ends loading state
+      setLoading(false);
     }
   };
 
-  // Clears the selected file and resets the state
-  const handleRemoveFile = () => {
-    setFile(null); // Reset file state
-    setInferredData(null); // Clear inferred data
-    setError(null); // Clear any error messages
-    setLoading(false); // Ensure loading is set to false
-    document.getElementById("fileInput").value = null; // Reset file input
+  const handleTypeChange = async (column, newType) => {
+    setTableError(null); // Clear previous data table error
+    setInferredData((prev) => ({ ...prev, [column]: newType }));
+    try {
+      await updateColumnTypes({ [column]: newType });
+    } catch (error) {
+      console.error("Failed to update column type:", error);
+      setTableError("Failed to update column type."); // Set error for data table
+    }
   };
 
-  // Updates data type for a specific column
-  const handleDataTypeChange = (column, newType) => {
-    setInferredData((prev) => ({
-      ...prev,
-      [column]: newType,
-    }));
+  const handleRemoveFile = () => {
+    setFile(null);
+    setInferredData(null);
+    setTableData([]);
+    setUploadError(null);
+    setLoading(false);
+    document.getElementById("fileInput").value = null;
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100">
-      <div className="bg-white shadow-2xl rounded-2xl p-8 w-full max-w-3xl mx-4">
-        {error && <ErrorMessage message={error} />}{" "}
-        {/* Shows error if present */}
-        <div className="flex flex-col sm:flex-row items-center gap-4 mb-6">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100 p-4">
+      {/* Upload Section */}
+      <div className="bg-white shadow-2xl rounded-2xl p-8 w-full max-w-3xl mx-4 mb-6">
+        <h2 className="text-2xl font-semibold text-center mb-6">
+          Upload Your Data File
+        </h2>
+        {uploadError && <ErrorMessage message={uploadError} />}{" "}
+        {/* Upload error message */}
+        <div className="flex flex-col sm:flex-row items-center gap-4 mb-4">
           <input
             id="fileInput"
             type="file"
@@ -76,30 +116,39 @@ const UploadFile = () => {
           />
           <button
             onClick={handleUpload}
-            disabled={loading} // Only disable during loading
+            disabled={loading}
             className={`px-6 py-2 rounded-lg shadow-md w-full sm:w-auto ${
               loading ? "bg-gray-400" : "bg-blue-500 hover:bg-blue-600"
             } text-white transition`}
           >
-            {loading ? "Uploading..." : "Upload"}
+            {loading ? "Loading..." : "Upload"}
           </button>
           {file && (
             <button
               onClick={handleRemoveFile}
-              disabled={loading} // Disables the remove button while loading
+              disabled={loading}
               className="px-4 py-2 rounded-lg shadow-md bg-red-500 text-white hover:bg-red-600 transition w-full sm:w-auto"
             >
               Remove File
             </button>
           )}
         </div>
-        {inferredData && (
-          <InferredDataDisplay
-            inferredData={inferredData}
-            onDataTypeChange={handleDataTypeChange}
-          />
-        )}
       </div>
+
+      {/* Data Table Section */}
+      {inferredData && (
+        <div className="bg-white shadow-2xl rounded-2xl p-8 w-full max-w-4xl mx-4">
+          <h3 className="text-xl font-semibold mb-4 text-center">
+            Data Table (Total Records: {totalCount})
+          </h3>
+          <DataTable
+            data={tableData}
+            inferredData={inferredData}
+            onTypeChange={handleTypeChange}
+          />
+          {tableError && <ErrorMessage message={tableError} />}{" "}
+        </div>
+      )}
     </div>
   );
 };

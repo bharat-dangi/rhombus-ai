@@ -10,10 +10,12 @@ export const mapDataType = (dType) => {
     case "int16":
     case "int32":
     case "int64":
+    case "Int64":
       return "Integer";
     case "datetime64[ns]":
       return "Date";
-    case ("timedelta[ns]", "timedelta64[ns]"):
+    case "timedelta[ns]":
+    case "timedelta64[ns]":
       return "TimeDelta";
     case "bool":
       return "Boolean";
@@ -22,6 +24,6 @@ export const mapDataType = (dType) => {
     case "complex128":
       return "Complex";
     default:
-      return "Text"; // Default for unknown types
+      return "Text"; // Default for unknown or unsupported types
   }
 };
